@@ -8,135 +8,65 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Android.App;
-using Android.Net.Wifi;
-using Java.Net;
 using Xamarin.Forms;
 using ProtocolType = System.Net.Sockets.ProtocolType;
 
 namespace AppIPCam
 {
-	public partial class MainPage : ContentPage
+    public partial class MainPage : ContentPage
     {
-        const int PORT_NO = 8080;
-        const string SERVER_IP = "127.0.0.1";
-
-        private string ip;
+        TcpClient client;
+        bool Run = true;
         // http://stackoverflow.com/questions/1081860/reading-data-from-an-open-http-stream
+
         public MainPage()
-		{
-			InitializeComponent();
-		    IPAddress[] adresses = Dns.GetHostAddresses(Dns.GetHostName());
-
-		    if (adresses != null && adresses[0] != null)
-		    {
-		        ip = adresses[0].ToString();
-		    }
-		    else
-		    {
-		    }
-		    
-		    var childSocketThread = new Thread(() =>
-		    {
-		        var t = Inet6Address.LocalHost;
-                
-            });
-		    childSocketThread.Start();
-
-
-            WifiManager wifiManager = (WifiManager)Forms.Context.GetSystemService(Service.WifiService);
-		    var iip = wifiManager.ConnectionInfo.IpAddress.ToString();
-            Debug.WriteLine("IP : " + iip);
-		    Debug.WriteLine("IP : " + iip);
-		    Debug.WriteLine("IP : " + iip);
-            IpAddr.Text = ip;
-		}
-
-	    private void GetStream(object sender, EventArgs e)
-	    {
-
-	        //---listen at the specified IP and port no.---
-	        IPAddress localAdd = IPAddress.Parse(ip);
-	        TcpListener listener = new TcpListener(localAdd, PORT_NO);
-	        Console.WriteLine("Listening...");
-	        listener.Start();
-
-            //---incoming client connected---
-	        var tcpClient = listener.AcceptTcpClient();
-
-
-            //Socket client = listener.AcceptSocket();
-	        Console.WriteLine("Connection accepted.");
-
-	        var childSocketThread = new Thread(() =>
-	        {
-	            NetworkStream clientStream = tcpClient.GetStream();
-                BinaryReader reader = new BinaryReader(clientStream);
-
-	            int size = reader.ReadInt32();
-                
-                Debug.WriteLine(size);
-
-
-
-
-
-
-
-                /*byte[] data = new byte[100];
-	            size = client.Receive(data);
-	            Console.WriteLine("Recieved data: ");
-	            for (int i = 0; i < size; i++)
-	                Console.Write(Convert.ToChar(data[i]));
-
-	            Console.WriteLine();
-
-	            client.Close();*/
-	        });
-	        childSocketThread.Start();
-
-
-
-
-
-
-            //var web = new HttpListener();
-
-
-
-
-
-
-
-            /*web.Prefixes.Add("http://localhost:8080/");
-
-	        Console.WriteLine("Listening..");
-
-	        web.Start();
-
-	        Console.WriteLine(web.GetContext());
-
-	        var context = web.GetContext();
-
-	        var response = context.Response;
-
-	        const string responseString = "<html><body>Hello world</body></html>";
-
-	        var buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
-
-	        response.ContentLength64 = buffer.Length;
-
-	        var output = response.OutputStream;
-
-	        output.Write(buffer, 0, buffer.Length);
-
-	        Console.WriteLine(output);
-
-	        output.Close();
-
-	        web.Stop();
-
-	        Console.ReadKey();*/
+        {
+            InitializeComponent();
+            string ip = "192.168.43.96";
+            IpEntry.Text = ip;
         }
-	}
+        private void Disconnect(object sender, EventArgs e)
+        {
+            client.Close();
+            Run = false;
+        }
+        private void Button_Clicked(object sender, EventArgs e)
+        {
+
+            var childSocketThread = new Thread(() =>
+            {
+                Run = true;
+                client = new TcpClient(IpEntry.Text, 8080);
+
+                NetworkStream stream = client.GetStream();
+
+                BinaryReader binaryReader = new BinaryReader(stream);
+
+                while (Run)
+                {
+                    try
+                    {
+                        int recv = 0;
+                        recv = binaryReader.ReadInt32();
+                        Debug.WriteLine("Image size : " + recv);
+
+                        if (recv > 0 && recv < 150000)
+                        {
+                            byte[] tab = new byte[recv];
+
+                            tab = binaryReader.ReadBytes(recv);
+                            //Debug.WriteLine(tab);
+                        }
+                        else
+                            Debug.WriteLine("La taille que t'as envoyé n'est pas bonne");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex);
+                    }
+                }
+            });
+            childSocketThread.Start();
+        }
+    }
 }

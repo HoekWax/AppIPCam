@@ -5,9 +5,10 @@
              x:Class="AppIPCam.MainPage">
 
     <StackLayout>
-        <Label x:Name="IpAddr" TextColor="Black"></Label>
-        <Image x:Name="StreamImage"></Image>
-        <Button Clicked="GetStream"></Button>
+        <Entry x:Name="IpEntry" Text="" TextColor="Black"></Entry>
+        <Image x:Name="StreamImage" HeightRequest="300" WidthRequest="300"></Image>
+        <Button Clicked="Button_Clicked" Text="Connect"></Button>
+        <Button Clicked="Disconnect" Text="Disconnect"></Button>
     </StackLayout>
 
 </ContentPage>
