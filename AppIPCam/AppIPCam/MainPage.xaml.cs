@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Forms;
@@ -17,12 +18,11 @@ namespace AppIPCam
     {
         TcpClient client;
         bool Run = true;
-        // http://stackoverflow.com/questions/1081860/reading-data-from-an-open-http-stream
 
         public MainPage()
         {
             InitializeComponent();
-            string ip = "192.168.43.96";
+            string ip = "192.168.43.79";
             IpEntry.Text = ip;
         }
         private void Disconnect(object sender, EventArgs e)
@@ -32,38 +32,42 @@ namespace AppIPCam
         }
         private void Button_Clicked(object sender, EventArgs e)
         {
-
-            var childSocketThread = new Thread(() =>
+            Run = true;
+            var childSocketThread = new Thread(async () =>
             {
-                Run = true;
                 client = new TcpClient(IpEntry.Text, 8080);
 
                 NetworkStream stream = client.GetStream();
 
-                BinaryReader binaryReader = new BinaryReader(stream);
-
                 while (Run)
                 {
+                    BinaryReader bR = new BinaryReader(stream);
+                    string lenght = "";
                     try
                     {
-                        int recv = 0;
-                        recv = binaryReader.ReadInt32();
-                        Debug.WriteLine("Image size : " + recv);
+                        lenght = bR.ReadString();
+                    } catch (Exception ex) {
+                        Run = false;
+                    }
 
-                        if (recv > 0 && recv < 150000)
-                        {
-                            byte[] tab = new byte[recv];
+                    if (lenght != "") {
+                        int len = Convert.ToInt32(lenght);
+                        Debug.WriteLine(len);
+                        try {
+                            byte[] tab = new byte[len];
+                            tab = bR.ReadBytes(len);
 
-                            tab = binaryReader.ReadBytes(recv);
-                            //Debug.WriteLine(tab);
+                            Device.BeginInvokeOnMainThread(() =>
+                            {
+                                ImageSource source = ImageSource.FromStream(() => new MemoryStream(tab));
+                                StreamImage.Source = source;
+
+                            });
+                        } catch (Exception ex) {
+                            Debug.WriteLine(ex);
                         }
-                        else
-                            Debug.WriteLine("La taille que t'as envoyé n'est pas bonne");
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine(ex);
-                    }
+                    await Task.Delay(40);
                 }
             });
             childSocketThread.Start();
